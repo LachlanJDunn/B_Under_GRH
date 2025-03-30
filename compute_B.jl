@@ -330,3 +330,5 @@ m = 0.2
 midpoints1 = [19 + i*m for i in 0:1981/m]
 midpoints = union([4*BigInt(10)^18], [BigInt(10)^i for i in midpoints1])
 @time create_B_parameters(midpoints, 650)
+
+println("B: $(sup(sum(b_result["sums"]) + bound_remainder(BigInt(10)^2000) + interval(1.840518)))")
