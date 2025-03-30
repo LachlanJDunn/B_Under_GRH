@@ -17,6 +17,7 @@ V_step = 10^4
 L_1 = 10^8
 L_2 = 10^10
 c_3 = interval(12.6244)
+L_4 = 10^7
 
 if isfile("V_list.jld2")
     @load "V_list.jld2" V_list
@@ -101,8 +102,11 @@ end
 # Calculates the function r(z)
 # Lemma 2.2
 function r_coeff_up(z)
-    pos_vals = union([sup(interval(0.5)*z)], [sup((interval(0.5) - j)*z + interval(2)^(interval(i-1))) for (i,j) in enumerate(f_zs)])
-    return interval(minimum(pos_vals))+interval(1)
+    if sup(z) < L_4
+        return interval(M_list[floor(Int, z)])
+    else
+        return (interval(4)/π_up^interval(2) + interval(2)/(sqrt(z)-interval(1)))*z + interval(0.5) * sqrt(z)/interval(2)
+    end
 end
 
 # Calculates upper bound on c_π
@@ -115,6 +119,19 @@ end
 # Lemma 2.1
 function D(L, z)
     return interval(3)*c_3 / sqrt(z) - interval(9)*c_3 / sqrt(L)
+end
+
+# Store the values of M(z) for z up to L_4 (set at 10^7)
+function create_M_list()
+    M_list = zeros(Int32, L_4)
+    count = 0
+    for i in 1:L_4
+        if i % 2 == 1 && squarefree(i)
+            count += 1
+        end
+        M_list[i] = count
+    end
+    @save "M_list.jld2" M_list
 end
 
 # Store the values of V(z) for z up to V_list_small_length (set at 10^8)
