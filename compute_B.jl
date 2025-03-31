@@ -105,7 +105,7 @@ function r_coeff_up(z)
     if sup(z) < L_4
         return interval(M_list[floor(Int, z)])
     else
-        return (interval(4)/π_up^interval(2) + interval(2)/(sqrt(z)-interval(1)))*z + interval(0.5) * sqrt(z)/interval(2)
+        return (interval(4)/π_up^interval(2) + interval(2)/(sqrt(z)-interval(1)) - (sqrt(z)-interval(1))/z + interval(0.5)*(interval(2)/(sqrt(z/interval(2))-interval(1)) - (sqrt(z/interval(2))-interval(1))/(z/interval(2))))*z + interval(0.5) * (sqrt(z)/interval(2)+interval(1))
     end
 end
 
@@ -329,6 +329,6 @@ end
 m = 0.2
 midpoints1 = [19 + i*m for i in 0:1981/m]
 midpoints = union([4*BigInt(10)^18], [BigInt(10)^i for i in midpoints1])
-@time create_B_parameters(midpoints, 650)
-
+#@time create_B_parameters(midpoints, 650)
+@load "B_result.jld2" b_result
 println("B: $(sup(sum(b_result["sums"]) + bound_remainder(BigInt(10)^2000) + interval(1.840518)))")
