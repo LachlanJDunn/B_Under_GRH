@@ -17,7 +17,7 @@ V_step = 10^4
 L_1 = 10^8
 L_2 = 10^10
 c_3 = interval(12.6244)
-L_4 = 10^7
+L_3 = 10^7
 
 if isfile("V_list.jld2")
     @load "V_list.jld2" V_list
@@ -25,28 +25,8 @@ end
 if isfile("V_list_small.jld2")
     @load "V_list_small.jld2" V_list_small
 end
-
-# Calculates f(z*) exactly
-# Lemma 2.2
-function f(z)
-    sum = interval(0)
-    product = prod(primes(3,z))
-    divs = divisors(product)[2:end]
-    for d in divs
-        if length(factor(d)) % 2 == 1
-            sum += interval(1) / (interval(2)^interval(length(factor(d))) * interval(d)^interval(2))
-        else
-            sum -= interval(1) / (interval(2)^interval(length(factor(d))) * interval(d)^interval(2))
-        end
-    end
-    return sum
-end
-
-# Stores each f(z*) to avoid recalculating
-# The maximum value of z* was set to 37 to avoid excessive computation
-f_zs = []
-for z in primes(3,37)
-    push!(f_zs, f(z))
+if isfile("M_list.jld2")
+    @load "M_list.jld2" M_list
 end
 
 # Calculates upper bound on the portion of the integal containing the V(z) term: Int_startp^endp{Li(t)/(V*t^2)} dt
@@ -102,10 +82,11 @@ end
 # Calculates the function r(z)
 # Lemma 2.2
 function r_coeff_up(z)
-    if sup(z) < L_4
+    b=interval(1.333)
+    if sup(z) < L_3
         return interval(M_list[floor(Int, z)])
     else
-        return (interval(4)/π_up^interval(2) + interval(2)/(sqrt(z)-interval(1)) - (sqrt(z)-interval(1))/z + interval(0.5)*(interval(2)/(sqrt(z/interval(2))-interval(1)) - (sqrt(z/interval(2))-interval(1))/(z/interval(2))))*z + interval(0.5) * (sqrt(z)/interval(2)+interval(1))
+        return (interval(4)/π_low^interval(2))*z + interval(3.038) * sqrt(z) + interval(5.744)*z^(interval(0.25))
     end
 end
 
@@ -121,11 +102,11 @@ function D(L, z)
     return interval(3)*c_3 / sqrt(z) - interval(9)*c_3 / sqrt(L)
 end
 
-# Store the values of M(z) for z up to L_4 (set at 10^7)
+# Store the values of M(z) for z up to L_3 (set at 10^7)
 function create_M_list()
-    M_list = zeros(Int32, L_4)
+    M_list = zeros(Int32, L_3)
     count = 0
-    for i in 1:L_4
+    for i in 1:L_3
         if i % 2 == 1 && squarefree(i)
             count += 1
         end
@@ -252,6 +233,12 @@ function bound_remainder(x)
     return interval(16) * interval(2) * interval(π_2_up) / log(x) + interval(8) / sqrt(x)
 end
 
+# Calculates the term 2*[pi_2(m_k)/m_k - pi_2(m_1)/m_1]
+# Assumes that m_1=4*10^18
+function partial_sum_term()
+    return -interval(2) * (interval(3023463123235320)/(interval(4)*interval(10)^interval(18)))
+end
+
 # Calculates c_1
 # Lemma 3.1
 function calculate_c_1(startp, endp)
@@ -271,13 +258,16 @@ end
 
 # Optimises B(Start, End) given an optimal z from a previous calculation of B(i, Start)
 function parameter_sweep(Start, End, start_z)
+    if Start < 4*10^18
+        throw(DomainError(x, "x must be greater than or equal to 4*10^18"))
+    end
     c_1 = calculate_c_1(Start, End)
     c_2 = calculate_c_2(Start, End)
     function int(z)
         return sup(c_1 / V_est_low(z) + c_2 * r_coeff_up(z)^interval(2))
     end
     # Optimises for z
-    opt = optimize(int, start_z, start_z*(End/Start))
+    opt = optimize(int, start_z, min(start_z*(End/Start), Start^(1/4)))
     z = Optim.minimizer(opt)
     return (sup(interval(2) * interval(int(z))), z)
 end
@@ -332,4 +322,5 @@ midpoints = union([4*BigInt(10)^18], [BigInt(10)^i for i in midpoints1])
 #@time create_B_parameters(midpoints, 650)
 
 @load "B_result.jld2" b_result
-println("B: $(sup(sum(b_result["sums"]) + bound_remainder(b_result["midpoints"][end]) + interval(1.840518)))")
+println("B: $(sup(sum(b_result["sums"]) + bound_remainder(b_result["midpoints"][end]) + interval(1.840518) + partial_sum_term()))")
+println(calculate_B_from_result(BigInt(10)^100, BigInt(10)^1999))
